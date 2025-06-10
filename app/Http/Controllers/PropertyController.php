@@ -2,120 +2,140 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Property;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use App\Http\Resources\PropertyResource;
-use Symfony\Component\HttpFoundation\Response;
-use Illuminate\Support\Facades\Auth;
-
+use App\Http\Services\PropertyService;
 
 class PropertyController extends Controller
 {
-    public function __construct()
+    protected PropertyService $service;
+
+    public function __construct(PropertyService $service)
     {
-        $this->middleware('auth:sanctum');
-        $this->authorizeResource(Property::class, 'property');
+        $this->service = $service;
     }
 
-    /**
-     * Get all properties owned by authenticated seller
-     */
-    public function index(): JsonResponse
+    protected function jsonError(\Throwable $e, int $status = 500): JsonResponse
+    {
+        return response()->json([
+            'message' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan.',
+        ], $status);
+    }
+
+    public function index(Request $request): JsonResponse
     {
         try {
-            $properties = Property::where('user_id', Auth::id())
-                ->latest()
-                ->get();
-
-            return PropertyResource::collection($properties)
-                ->response()
-                ->setStatusCode(Response::HTTP_OK);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch properties: ' . $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $properties = $this->service->allByUser(auth()->id());
+            return response()->json($properties);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
         }
     }
 
-    /**
-     * Create new property
-     */
+    public function show(string $propertyId): JsonResponse
+    {
+        try {
+            $property = $this->service->findByPropertyIdAndUser($propertyId, auth()->id());
+            return response()->json($property);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e, 404);
+        }
+    }
+
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'type' => 'required|in:rumah,apartemen,tanah,ruko',
-            'description' => 'nullable|string',
-            'location' => 'required|string'
+        $data = $request->validate([
+            'namaRumah' => 'required|string|max:255',
+            'harga' => 'required|numeric|min:0',
+            'tipeRumah' => 'required|in:rumah,apartemen,hotel,kos,villa,lainnya',
+            'deskripsi' => 'nullable|string',
+            'lokasi' => 'nullable|string',
         ]);
 
         try {
-            $user = Auth::user();
-            $property = $user->properties()->create(array_merge(
-                $validated,
-                ['status' => 'pending']
-            ));
+            $property = $this->service->create([
+                'nama_rumah' => $data['namaRumah'],
+                'harga' => $data['harga'],
+                'tipe_rumah' => $data['tipeRumah'],
+                'deskripsi' => $data['deskripsi'] ?? null,
+                'lokasi' => $data['lokasi'] ?? null,
+                'user_id' => auth()->id(),
+            ]);
 
-            return (new PropertyResource($property))
-                ->response()
-                ->setStatusCode(Response::HTTP_CREATED);
-
-        } catch (\Exception $e) {
             return response()->json([
-                'success' => false,
-                'message' => 'Failed to create property: ' . $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                'message' => 'Property berhasil dibuat.',
+                'data' => $property,
+            ], 201);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
         }
     }
 
-
-    /**
-     * Update property details
-     */
-    public function update(Request $request, Property $property): JsonResponse
+    public function update(Request $request, string $propertyId): JsonResponse
     {
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'price' => 'sometimes|numeric|min:0',
-            'status' => 'sometimes|in:aktif,pending,terjual',
-            'description' => 'nullable|string',
-            'location' => 'sometimes|string'
+        $data = $request->validate([
+            'namaRumah' => 'nullable|string|max:255',
+            'harga' => 'nullable|numeric|min:0',
+            'tipeRumah' => 'nullable|in:rumah,apartemen,hotel,kos,villa,lainnya',
+            'deskripsi' => 'nullable|string',
+            'lokasi' => 'nullable|string',
         ]);
 
         try {
-            $property->update($validated);
+            $updated = $this->service->updateByPropertyIdAndUser($propertyId, auth()->id(), [
+                'nama_rumah' => $data['namaRumah'] ?? null,
+                'harga' => $data['harga'] ?? null,
+                'tipe_rumah' => $data['tipeRumah'] ?? null,
+                'deskripsi' => $data['deskripsi'] ?? null,
+                'lokasi' => $data['lokasi'] ?? null,
+            ]);
 
-            return (new PropertyResource($property))
-                ->response()
-                ->setStatusCode(Response::HTTP_OK);
-
-        } catch (\Exception $e) {
             return response()->json([
-                'success' => false,
-                'message' => 'Failed to update property: ' . $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                'message' => 'Property berhasil diperbarui.',
+                'data' => $updated,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e, 403);
         }
     }
 
-    /**
-     * Delete property
-     */
-    public function destroy(Property $property): JsonResponse
+    public function destroy(string $propertyId): JsonResponse
     {
         try {
-            $property->delete();
+            $this->service->deleteByPropertyIdAndUser($propertyId, auth()->id());
 
-            return response()->json(null, Response::HTTP_NO_CONTENT);
-
-        } catch (\Exception $e) {
             return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete property: ' . $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                'message' => 'Property berhasil dihapus.'
+            ]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e, 403);
+        }
+    }
+
+    public function getPropertyTypes(): JsonResponse
+    {
+        return response()->json([
+            'types' => $this->service->getAvailableTypes(),
+        ]);
+    }
+
+    public function indexForPembeli(): JsonResponse
+    {
+        try {
+            $properties = $this->service->all();
+            return response()->json($properties);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    public function showForPembeli(string $propertyId): JsonResponse
+    {
+        try {
+            $property = $this->service->findByPropertyId($propertyId);
+            return response()->json($property);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e, 404);
         }
     }
 }
