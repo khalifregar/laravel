@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\JWTGuard;
 
 class AuthService
 {
@@ -28,18 +27,16 @@ class AuthService
         ];
     }
 
-    public function login(array $data, string $role): array
+    public function login(array $data): array
     {
         $identifier = $data['identifier'];
         $password = $data['password'] ?? null;
 
         $user = User::where(function ($query) use ($identifier) {
             $query->where('email', $identifier)
-                ->orWhere('phone', $identifier)
-                ->orWhere('username', $identifier);
-        })
-            ->where('role', $role)
-            ->first();
+                  ->orWhere('phone', $identifier)
+                  ->orWhere('username', $identifier);
+        })->first();
 
         if (!$user || !Hash::check($password, $user->password)) {
             throw ValidationException::withMessages([
@@ -60,19 +57,16 @@ class AuthService
 
     public function me(): ?User
     {
-        $guard = auth('api');
-        return $guard->user();
+        return auth('api')->user();
     }
 
     public function logout(): void
     {
-        $guard = auth('api');
-        $guard->logout();
+        auth('api')->logout();
     }
 
     public function refresh(): string
     {
-        $guard = JWTAuth::guard('api');
-        return $guard->refresh();
+        return auth('api')->refresh();
     }
 }

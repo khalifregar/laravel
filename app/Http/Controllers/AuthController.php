@@ -35,19 +35,9 @@ class AuthController extends Controller
         return $this->handleRegister($request, 'pembeli');
     }
 
-    public function loginAdmin(Request $request): JsonResponse
+    public function login(Request $request): JsonResponse
     {
-        return $this->handleLogin($request, 'admin');
-    }
-
-    public function loginPenjual(Request $request): JsonResponse
-    {
-        return $this->handleLogin($request, 'penjual');
-    }
-
-    public function loginPembeli(Request $request): JsonResponse
-    {
-        return $this->handleLogin($request, 'pembeli');
+        return $this->handleLogin($request);
     }
 
     public function me(): JsonResponse
@@ -79,7 +69,6 @@ class AuthController extends Controller
             ], 500);
         }
     }
-
 
     public function updateProfile(Request $request, $id): JsonResponse
     {
@@ -196,7 +185,7 @@ class AuthController extends Controller
         }
     }
 
-    private function handleLogin(Request $request, string $role): JsonResponse
+    private function handleLogin(Request $request): JsonResponse
     {
         try {
             $data = $request->validate([
@@ -204,10 +193,10 @@ class AuthController extends Controller
                 'password' => 'required|string',
             ]);
 
-            $result = $this->auth->login($data, $role);
+            $result = $this->auth->login($data);
             $user = $result['user'];
 
-            $hasPendingOtp = \App\Models\WhatsappOtp::where('phone', $user->phone)
+            $hasPendingOtp = WhatsappOtp::where('phone', $user->phone)
                 ->where('is_used', false)
                 ->where('expires_at', '>=', now())
                 ->exists();
