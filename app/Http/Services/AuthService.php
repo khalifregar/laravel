@@ -10,42 +10,36 @@ use Tymon\JWTAuth\JWTGuard;
 
 class AuthService
 {
-    /**
-     * Register user berdasarkan role.
-     */
-    public function register(array $data, string $role): array
+    public function register(array $data, string $role = 'pembeli'): array
     {
         $user = User::create([
             'username' => $data['username'],
-            'email'    => $data['email'] ?? null,
-            'phone'    => $data['phone'] ?? null,
+            'email' => $data['email'] ?? null,
+            'phone' => $data['phone'] ?? null,
             'password' => isset($data['password']) ? Hash::make($data['password']) : null,
-            'role'     => $role,
+            'role' => $role,
         ]);
 
         $token = JWTAuth::fromUser($user);
 
         return [
             'token' => $token,
-            'user'  => $user,
+            'user' => $user,
         ];
     }
 
-    /**
-     * Login user berdasarkan identifier (email, username, atau phone) dan role yang sesuai.
-     */
     public function login(array $data, string $role): array
     {
         $identifier = $data['identifier'];
-        $password   = $data['password'] ?? null;
+        $password = $data['password'] ?? null;
 
         $user = User::where(function ($query) use ($identifier) {
-                        $query->where('email', $identifier)
-                              ->orWhere('phone', $identifier)
-                              ->orWhere('username', $identifier);
-                    })
-                    ->where('role', $role)
-                    ->first();
+            $query->where('email', $identifier)
+                ->orWhere('phone', $identifier)
+                ->orWhere('username', $identifier);
+        })
+            ->where('role', $role)
+            ->first();
 
         if (!$user || !Hash::check($password, $user->password)) {
             throw ValidationException::withMessages([
@@ -60,37 +54,25 @@ class AuthService
 
         return [
             'token' => $token,
-            'user'  => $user,
+            'user' => $user,
         ];
     }
 
-    /**
-     * Mengambil user dari token yang sedang aktif.
-     */
     public function me(): ?User
     {
-        /** @var JWTGuard $guard */
         $guard = auth('api');
         return $guard->user();
     }
 
-    /**
-     * Logout JWT user.
-     */
     public function logout(): void
     {
-        /** @var JWTGuard $guard */
         $guard = auth('api');
         $guard->logout();
     }
 
-    /**
-     * Refresh JWT token.
-     */
     public function refresh(): string
     {
-        /** @var JWTGuard $guard */
-        $guard = auth('api');
+        $guard = JWTAuth::guard('api');
         return $guard->refresh();
     }
 }

@@ -9,17 +9,23 @@ return new class extends Migration {
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+
             $table->string('username')->unique()->nullable();
+
             $table->string('email')->unique()->nullable();
+
             $table->string('phone')->unique()->nullable();
 
             $table->string('password')->nullable();
+
             $table->enum('role', ['admin', 'penjual', 'pembeli'])->default('pembeli');
 
             $table->string('access_token', 512)->nullable();
+
             $table->timestamp('last_login_at')->nullable();
 
             $table->rememberToken();
+
             $table->timestamps();
         });
     }

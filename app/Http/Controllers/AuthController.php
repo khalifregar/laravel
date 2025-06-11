@@ -20,9 +20,6 @@ class AuthController extends Controller
         $this->otp = $otp;
     }
 
-    // ====================
-    // REGISTER PER ROLE
-    // ====================
     public function registerAdmin(Request $request): JsonResponse
     {
         return $this->handleRegister($request, 'admin');
@@ -38,9 +35,6 @@ class AuthController extends Controller
         return $this->handleRegister($request, 'pembeli');
     }
 
-    // ====================
-    // LOGIN PER ROLE
-    // ====================
     public function loginAdmin(Request $request): JsonResponse
     {
         return $this->handleLogin($request, 'admin');
@@ -56,38 +50,35 @@ class AuthController extends Controller
         return $this->handleLogin($request, 'pembeli');
     }
 
-    // ====================
-    // PROFILE (ME & UPDATE)
-    // ====================
-public function me(): JsonResponse
-{
-    try {
-        $user = $this->auth->me();
+    public function me(): JsonResponse
+    {
+        try {
+            $user = $this->auth->me();
 
-        if (!$user) {
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Token tidak valid atau user tidak ditemukan.'
+                ], 401);
+            }
+
             return response()->json([
-                'message' => 'Token tidak valid atau user tidak ditemukan.'
-            ], 401);
+                'message' => 'Berhasil mengambil data pengguna.',
+                'data' => [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'role' => $user->role,
+                    'created_at' => $user->created_at,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat mengambil data pengguna.',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'message' => 'Berhasil mengambil data pengguna.',
-            'data' => [
-                'id'         => $user->id,
-                'username'   => $user->username,
-                'email'      => $user->email,
-                'phone'      => $user->phone,
-                'role'       => $user->role,
-                'created_at' => $user->created_at,
-            ]
-        ]);
-    } catch (\Throwable $e) {
-        return response()->json([
-            'message' => 'Terjadi kesalahan saat mengambil data pengguna.',
-            'error'   => $e->getMessage()
-        ], 500);
     }
-}
 
 
     public function updateProfile(Request $request, $id): JsonResponse
@@ -126,9 +117,6 @@ public function me(): JsonResponse
         ]);
     }
 
-    // ====================
-    // LOGOUT & REFRESH
-    // ====================
     public function logout($id): JsonResponse
     {
         $user = $this->auth->me();
@@ -158,10 +146,7 @@ public function me(): JsonResponse
         ]);
     }
 
-    // ====================
-    // INTERNAL HANDLERS
-    // ====================
-    private function handleRegister(Request $request, string $role): JsonResponse
+    private function handleRegister(Request $request, string $role = 'pembeli'): JsonResponse
     {
         try {
             $data = $request->validate([
@@ -211,56 +196,53 @@ public function me(): JsonResponse
         }
     }
 
-private function handleLogin(Request $request, string $role): JsonResponse
-{
-    try {
-        $data = $request->validate([
-            'identifier' => 'required|string',
-            'password'   => 'required|string',
-        ]);
+    private function handleLogin(Request $request, string $role): JsonResponse
+    {
+        try {
+            $data = $request->validate([
+                'identifier' => 'required|string',
+                'password' => 'required|string',
+            ]);
 
-        $result = $this->auth->login($data, $role);
-        $user = $result['user'];
+            $result = $this->auth->login($data, $role);
+            $user = $result['user'];
 
-        $hasPendingOtp = \App\Models\WhatsappOtp::where('phone', $user->phone)
-            ->where('is_used', false)
-            ->where('expires_at', '>=', now())
-            ->exists();
+            $hasPendingOtp = \App\Models\WhatsappOtp::where('phone', $user->phone)
+                ->where('is_used', false)
+                ->where('expires_at', '>=', now())
+                ->exists();
 
-        if ($hasPendingOtp) {
+            if ($hasPendingOtp) {
+                return response()->json([
+                    'message' => 'Silakan verifikasi OTP terlebih dahulu sebelum login.'
+                ], 403);
+            }
+
+            $user->access_token = $result['token'];
+            $user->save();
+
             return response()->json([
-                'message' => 'Silakan verifikasi OTP terlebih dahulu sebelum login.'
-            ], 403);
+                'message' => 'Login berhasil.',
+                'data' => [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'role' => $user->role,
+                    'created_at' => $user->created_at,
+                    'access_token' => $result['token'],
+                ]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validasi gagal.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan server.',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // ✅ Simpan token biar bisa dipakai nanti
-        $user->access_token = $result['token'];
-        $user->save();
-
-        return response()->json([
-            'message' => 'Login berhasil.',
-            'data' => [
-                'id'           => $user->id,
-                'username'     => $user->username,
-                'email'        => $user->email,
-                'phone'        => $user->phone,
-                'role'         => $user->role,
-                'created_at'   => $user->created_at,
-                'access_token' => $result['token'],
-            ]
-        ]);
-    } catch (ValidationException $e) {
-        return response()->json([
-            'message' => 'Validasi gagal.',
-            'errors'  => $e->errors()
-        ], 422);
-    } catch (\Throwable $e) {
-        return response()->json([
-            'message' => 'Terjadi kesalahan server.',
-            'error' => $e->getMessage()
-        ], 500);
     }
-}
-
-
 }

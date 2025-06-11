@@ -31,6 +31,17 @@ class User extends Authenticatable implements JWTSubject
         'last_login_at' => 'datetime',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($user) {
+            if (empty($user->role)) {
+                $user->role = 'pembeli';
+            }
+        });
+    }
+
     public function getJWTIdentifier()
     {
         return $this->getKey();
