@@ -25,17 +25,35 @@ return [
     | Guard 'web' tetap pakai session (buat frontend biasa)
     */
 
-    'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
-        ],
-
-        'api' => [
-            'driver' => 'jwt',
-            'provider' => 'users',
-        ],
+'guards' => [
+    'web' => [
+        'driver' => 'session',
+        'provider' => 'users',
     ],
+
+    'api' => [
+        'driver' => 'jwt',
+        'provider' => 'users',
+    ],
+
+    // ⬇️ Tambahin ini biar gak error saat di-loop
+    'admin' => [
+        'driver' => 'jwt',
+        'provider' => 'users',
+    ],
+
+    'penjual' => [
+        'driver' => 'jwt',
+        'provider' => 'users',
+    ],
+
+    'pembeli' => [
+        'driver' => 'jwt',
+        'provider' => 'users',
+    ],
+],
+
+
 
     /*
     |--------------------------------------------------------------------------

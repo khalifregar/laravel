@@ -9,6 +9,9 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthService
 {
+    /**
+     * Register new user with given role.
+     */
     public function register(array $data, string $role = 'pembeli'): array
     {
         $user = User::create([
@@ -27,6 +30,9 @@ class AuthService
         ];
     }
 
+    /**
+     * Attempt login and return token + user data.
+     */
     public function login(array $data): array
     {
         $identifier = $data['identifier'];
@@ -55,18 +61,46 @@ class AuthService
         ];
     }
 
+    /**
+     * Return current user from any valid guard.
+     */
     public function me(): ?User
     {
-        return auth('api')->user();
+        foreach (['api', 'admin', 'penjual', 'pembeli'] as $guard) {
+            if (auth($guard)->check()) {
+                return auth($guard)->user();
+            }
+        }
+
+        return null;
     }
 
+    /**
+     * Logout from the current authenticated guard.
+     */
     public function logout(): void
     {
-        auth('api')->logout();
+        foreach (['api', 'admin', 'penjual', 'pembeli'] as $guard) {
+            if (auth($guard)->check()) {
+                auth($guard)->logout();
+                return;
+            }
+        }
     }
 
+    /**
+     * Refresh token from the active guard.
+     */
     public function refresh(): string
     {
-        return auth('api')->refresh();
+        foreach (['api', 'admin', 'penjual', 'pembeli'] as $guard) {
+            if (auth($guard)->check()) {
+                return auth($guard)->refresh();
+            }
+        }
+
+        throw ValidationException::withMessages([
+            'token' => ['Token tidak valid atau tidak ditemukan.'],
+        ]);
     }
 }
