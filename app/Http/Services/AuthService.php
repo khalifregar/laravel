@@ -9,9 +9,6 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthService
 {
-    /**
-     * Register new user with given role.
-     */
     public function register(array $data, string $role = 'pembeli'): array
     {
         $user = User::create([
@@ -30,9 +27,6 @@ class AuthService
         ];
     }
 
-    /**
-     * Attempt login and return token + user data.
-     */
     public function login(array $data): array
     {
         $identifier = $data['identifier'];
@@ -40,8 +34,8 @@ class AuthService
 
         $user = User::where(function ($query) use ($identifier) {
             $query->where('email', $identifier)
-                  ->orWhere('phone', $identifier)
-                  ->orWhere('username', $identifier);
+                ->orWhere('phone', $identifier)
+                ->orWhere('username', $identifier);
         })->first();
 
         if (!$user || !Hash::check($password, $user->password)) {
@@ -61,9 +55,6 @@ class AuthService
         ];
     }
 
-    /**
-     * Return current user from any valid guard.
-     */
     public function me(): ?User
     {
         foreach (['api', 'admin', 'penjual', 'pembeli'] as $guard) {
@@ -75,9 +66,6 @@ class AuthService
         return null;
     }
 
-    /**
-     * Logout from the current authenticated guard.
-     */
     public function logout(): void
     {
         foreach (['api', 'admin', 'penjual', 'pembeli'] as $guard) {
@@ -88,9 +76,6 @@ class AuthService
         }
     }
 
-    /**
-     * Refresh token from the active guard.
-     */
     public function refresh(): string
     {
         foreach (['api', 'admin', 'penjual', 'pembeli'] as $guard) {

@@ -8,9 +8,6 @@ use App\Events\MessageSent;
 
 class ChatController extends Controller
 {
-    /**
-     * Ambil semua pesan antara user login dan target user.
-     */
     public function index($userId)
     {
         $authId = auth()->id();
@@ -38,9 +35,6 @@ class ChatController extends Controller
         ]);
     }
 
-    /**
-     * Kirim pesan ke user lain.
-     */
     public function store(Request $request)
     {
         try {

@@ -156,36 +156,36 @@ class PropertyController extends Controller
     }
 
     public function filterByLocation(Request $request): JsonResponse
-{
-    $provinsi = $request->query('provinsi');
-    $kabupaten = $request->query('kabupaten');
-    $kecamatan = $request->query('kecamatan');
-    $kelurahan = $request->query('kelurahan');
+    {
+        $provinsi = $request->query('provinsi');
+        $kabupaten = $request->query('kabupaten');
+        $kecamatan = $request->query('kecamatan');
+        $kelurahan = $request->query('kelurahan');
 
-    try {
-        $query = \App\Models\Property::query();
+        try {
+            $query = \App\Models\Property::query();
 
-        if ($provinsi) {
-            $query->where('provinsi', 'like', "%$provinsi%");
-        }
-        if ($kabupaten) {
-            $query->where('kabupaten', 'like', "%$kabupaten%");
-        }
-        if ($kecamatan) {
-            $query->where('kecamatan', 'like', "%$kecamatan%");
-        }
-        if ($kelurahan) {
-            $query->where('kelurahan', 'like', "%$kelurahan%");
-        }
+            if ($provinsi) {
+                $query->where('provinsi', 'like', "%$provinsi%");
+            }
+            if ($kabupaten) {
+                $query->where('kabupaten', 'like', "%$kabupaten%");
+            }
+            if ($kecamatan) {
+                $query->where('kecamatan', 'like', "%$kecamatan%");
+            }
+            if ($kelurahan) {
+                $query->where('kelurahan', 'like', "%$kelurahan%");
+            }
 
-        $results = $query->with('user')->get();
+            $results = $query->with('user')->get();
 
-        return response()->json([
-            'data' => $results,
-        ]);
-    } catch (\Throwable $e) {
-        return $this->jsonError($e);
+            return response()->json([
+                'data' => $results,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
     }
-}
 
 }
