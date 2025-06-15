@@ -16,18 +16,28 @@ class Property extends Model
         'harga',
         'tipe_rumah',
         'deskripsi',
-        'lokasi',
+        'provinsi',
+        'kabupaten',
+        'kecamatan',
+        'kelurahan',
     ];
 
     protected $casts = [
         'harga' => 'integer',
     ];
 
-    /**
-     * Relasi ke user (penjual atau admin)
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getFullLokasiAttribute(): string
+    {
+        return implode(', ', array_filter([
+            $this->kelurahan,
+            $this->kecamatan,
+            $this->kabupaten,
+            $this->provinsi,
+        ]));
     }
 }

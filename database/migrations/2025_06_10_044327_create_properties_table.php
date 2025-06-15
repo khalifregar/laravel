@@ -7,22 +7,28 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('properties', function (Blueprint $table) {
-            $table->id();
-            $table->uuid('property_id')->unique();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->string('nama_rumah');
-            $table->unsignedBigInteger('harga');
-            $table->enum('tipe_rumah', ['rumah', 'apartemen', 'hotel', 'kos', 'villa', 'lainnya']);
-            $table->text('deskripsi')->nullable();
-            $table->string('lokasi')->nullable();
-            $table->timestamps();
-        });
+Schema::create('properties', function (Blueprint $table) {
+    $table->id();
+    $table->uuid('property_id')->unique();
+    $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+    $table->string('nama_rumah');
+    $table->unsignedBigInteger('harga');
+    $table->enum('tipe_rumah', ['rumah', 'apartemen', 'hotel', 'kos', 'villa', 'lainnya']);
+    $table->text('deskripsi')->nullable();
+
+    // Lokasi detail
+    $table->string('provinsi')->nullable();
+    $table->string('kabupaten')->nullable();
+    $table->string('kecamatan')->nullable();
+    $table->string('kelurahan')->nullable();
+
+    $table->timestamps();
+});
+
     }
 
-public function down(): void
-{
-    Schema::dropIfExists('properties'); // ✅ FIXED
-}
-
+    public function down(): void
+    {
+        Schema::dropIfExists('properties');
+    }
 };
